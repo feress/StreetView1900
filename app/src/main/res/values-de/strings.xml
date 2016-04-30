@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">StreetView1900</string>
+    <string name="title_activity_main">Street View 1900</string>
+    <string name="error_location_permission_refused">Ohne Erlaubnis können wir Deine Position nicht bestimmen. Das ist schade :-(</string>
+    <string name="replicate_photo">Foto nachstellen</string>
+</resources>
