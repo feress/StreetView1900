@@ -28,13 +28,16 @@ public class MapInfoWindow implements GoogleMap.InfoWindowAdapter {
 
     @Override
     public View getInfoContents(Marker marker) {
-        TextView titleView = (TextView) mInfoWindow.findViewById(R.id.info_window_title);
-        TextView descriptionView = (TextView) mInfoWindow.findViewById(R.id.info_window_description);
-        ImageView imageView = (ImageView) mInfoWindow.findViewById(R.id.info_window_image);
-
-        titleView.setText(marker.getTitle());
-        descriptionView.setText(marker.getSnippet());
+        //ImageView imageView = (ImageView) mInfoWindow.findViewById(R.id.info_window_image);
         //imageView.setImageResource(android.R.drawable.btn_plus);
         return mInfoWindow;
+    }
+
+    public void setInformation(String title, String description) {
+        TextView titleView = (TextView) mInfoWindow.findViewById(R.id.info_window_title);
+        TextView descriptionView = (TextView) mInfoWindow.findViewById(R.id.info_window_description);
+
+        titleView.setText(title);
+        descriptionView.setText(description);
     }
 }

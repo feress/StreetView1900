@@ -20,6 +20,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.List;
@@ -28,6 +29,7 @@ import de.fh_dortmund.vms.streetview1900.R;
 import de.fh_dortmund.vms.streetview1900.api.StreetView1900Endpoint;
 import de.fh_dortmund.vms.streetview1900.api.StreetView1900Service;
 import de.fh_dortmund.vms.streetview1900.api.model.Location;
+import de.fh_dortmund.vms.streetview1900.controls.MarkerManager;
 import de.fh_dortmund.vms.streetview1900.views.MapInfoWindow;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -38,10 +40,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private static final String LOG_TAG = MainActivity.class.getName();
     private static final long MIN_TIME = 400;
     private static final float MIN_DISTANCE = 1000;
-    private static final int STREET_VIEW_1900_PERMISSION_ACCESSS_LOCATION = 1;
+    private static final int STREET_VIEW_1900_PERMISSION_ACCESS_LOCATION = 1;
 
     private GoogleMap mMap;
-    private StreetView1900Endpoint mRestEndpoint;
     private LocationManager mLocationManager;
 
     @Override
@@ -56,7 +57,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         // Get location service and request current location
         mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         requestLocation();
-
     }
 
     private void requestLocation() {
@@ -66,7 +66,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             // If not granted, request permissions
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
-                    STREET_VIEW_1900_PERMISSION_ACCESSS_LOCATION);
+                    STREET_VIEW_1900_PERMISSION_ACCESS_LOCATION);
         } else {
             // If granted, request location
             mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, MIN_TIME, MIN_DISTANCE, this);
@@ -76,22 +76,21 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch (requestCode) {
-            case STREET_VIEW_1900_PERMISSION_ACCESSS_LOCATION: {
+            case STREET_VIEW_1900_PERMISSION_ACCESS_LOCATION: {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     requestLocation();
                 } else {
-                    Toast.makeText(this, R.string.app_name, Toast.LENGTH_LONG);
+                    Toast.makeText(this, R.string.error_location_permission_refused, Toast.LENGTH_LONG);
                 }
                 return;
             }
         }
     }
 
-
     /**
      * This callback is triggered when the map is ready to be used.
      * This is where we can call the StreetView1900 REST Service and add markers for all existing
-     * photos.
+     * photos (MarkerManager does the magic for us).
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -102,46 +101,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             Log.e(LOG_TAG, "Can't show current location. Permission denied.", e);
         }
 
-        mMap.setInfoWindowAdapter(new MapInfoWindow(this));
-
-        // REST Magic
-        mRestEndpoint = StreetView1900Service.getInstance().getEndpoint();
-        Call<List<Location>> allLocations = mRestEndpoint.getLocations();
-        allLocations.enqueue(new Callback<List<Location>>() {
-            @Override
-            public void onResponse(Call<List<Location>> call, Response<List<Location>> response) {
-                if (response.isSuccessful()) {
-                    displayLocationsOnMap(response.body());
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<Location>> call, Throwable t) {
-                Log.e(LOG_TAG, "Unable to load locations from REST service", t);
-            }
-        });
-    }
-
-    /**
-     * Adds a marker for each location in locations
-     * @param locations
-     */
-    private void displayLocationsOnMap(List<Location> locations) {
-        for (Location l : locations) {
-            Log.i(LOG_TAG, l.toString());
-            LatLng position = new LatLng(51.486296 + 0.1 * Math.random(), 7.412094 + 0.1 * Math.random());
-            mMap.addMarker(new MarkerOptions()
-                    .icon(getMarkerIcon())
-                    .position(position)
-                    .title(l.getName())
-                    .snippet(l.getDescription()));
-        }
-    }
-
-    private BitmapDescriptor getMarkerIcon() {
-        float[] hsv = new float[3];
-        Color.colorToHSV(getResources().getColor(R.color.colorPrimary, getTheme()), hsv);
-        return BitmapDescriptorFactory.defaultMarker(hsv[0]);
+        MarkerManager markerManager = new MarkerManager(this, mMap);
+        mMap.setOnMarkerClickListener(markerManager);
+        markerManager.showMarkers();
     }
 
     @Override
