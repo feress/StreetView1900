@@ -28,8 +28,6 @@ public class MapInfoWindow implements GoogleMap.InfoWindowAdapter {
 
     @Override
     public View getInfoContents(Marker marker) {
-        //ImageView imageView = (ImageView) mInfoWindow.findViewById(R.id.info_window_image);
-        //imageView.setImageResource(android.R.drawable.btn_plus);
         return mInfoWindow;
     }
 
@@ -39,5 +37,16 @@ public class MapInfoWindow implements GoogleMap.InfoWindowAdapter {
 
         titleView.setText(title);
         descriptionView.setText(description);
+    }
+
+    public ImageView getImageView() {
+        return (ImageView) mInfoWindow.findViewById(R.id.info_window_image);
+    }
+
+    public void resetInfoWindow() {
+        ((TextView) mInfoWindow.findViewById(R.id.info_window_title)).setText("");
+        ((TextView) mInfoWindow.findViewById(R.id.info_window_description)).setText("");
+
+        ((ImageView) mInfoWindow.findViewById(R.id.info_window_image)).setImageResource(android.R.drawable.ic_menu_gallery);
     }
 }

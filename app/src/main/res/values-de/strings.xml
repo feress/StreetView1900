@@ -4,4 +4,5 @@
     <string name="title_activity_main">Street View 1900</string>
     <string name="error_location_permission_refused">Ohne Erlaubnis können wir Deine Position nicht bestimmen. Das ist schade :-(</string>
     <string name="replicate_photo">Foto nachstellen</string>
+    <string name="error_loading_information">Informationen zu diesem Punkt können nicht abgerufen werden.</string>
 </resources>

@@ -3,4 +3,5 @@
     <string name="title_activity_main">Street View 1900</string>
     <string name="error_location_permission_refused">Unable to get your location without permission. That\'s sad :-(</string>
     <string name="replicate_photo">Replicate Photo</string>
+    <string name="error_loading_information">Can\'t load information for this marker.</string>
 </resources>

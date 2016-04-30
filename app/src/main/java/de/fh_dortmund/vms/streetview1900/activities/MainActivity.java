@@ -10,6 +10,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdate;
@@ -102,7 +103,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         MarkerManager markerManager = new MarkerManager(this, mMap);
-        mMap.setOnMarkerClickListener(markerManager);
         markerManager.showMarkers();
     }
 
@@ -130,5 +130,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onProviderDisabled(String provider) {
+    }
+
+    public void onPhotoReplicate(View view) {
+        Log.i(LOG_TAG, "Switch to new activity");
     }
 }

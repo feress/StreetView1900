@@ -8,18 +8,22 @@
         android:layout_width="@dimen/map_info_window_image_width"
         android:layout_height="@dimen/map_info_window_image_height">
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_margin="1dp"
-            android:background="@android:color/darker_gray" />
-
         <ImageView
             android:id="@+id/info_window_image"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/map_info_window_image_height"
             android:maxWidth="@dimen/map_info_window_image_width"
-            android:visibility="invisible" />
+            android:visibility="visible"
+            android:minWidth="@dimen/map_info_window_image_width"
+            android:src="@android:drawable/ic_menu_gallery" />
+
+        <!--<View-->
+            <!--android:id="@+id/info_window_placeholder"-->
+            <!--android:layout_width="1dp"-->
+            <!--android:layout_height="1dp"-->
+            <!--android:layout_margin="1dp"-->
+            <!--android:background="@android:color/darker_gray"-->
+            <!--android:visibility="visible" />-->
     </FrameLayout>
 
     <LinearLayout
