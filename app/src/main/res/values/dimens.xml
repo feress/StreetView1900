@@ -2,4 +2,7 @@
 <resources>
     <dimen name="map_info_window_image_width">125dp</dimen>
     <dimen name="map_info_window_image_height">125dp</dimen>
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <dimen name="activity_horizontal_margin">16dp</dimen>
+    <dimen name="activity_vertical_margin">16dp</dimen>
 </resources>

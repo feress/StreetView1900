@@ -1,6 +1,7 @@
 package de.fh_dortmund.vms.streetview1900.controls;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Handler;
 import android.util.Log;
@@ -18,6 +19,7 @@ import java.util.List;
 
 import de.fh_dortmund.vms.streetview1900.BuildConfig;
 import de.fh_dortmund.vms.streetview1900.R;
+import de.fh_dortmund.vms.streetview1900.activities.ReproducePhotoActivity;
 import de.fh_dortmund.vms.streetview1900.api.StreetView1900Endpoint;
 import de.fh_dortmund.vms.streetview1900.api.StreetView1900Service;
 import de.fh_dortmund.vms.streetview1900.api.model.ImageInformation;
@@ -113,6 +115,10 @@ public class MarkerManager implements GoogleMap.OnMarkerClickListener, GoogleMap
     @Override
     public void onInfoWindowClick(Marker marker) {
         Log.i(LOG_TAG, "Load new activity for " + mCurrentLocation);
+        Intent intent = new Intent(mParentActivity, ReproducePhotoActivity.class);
+        intent.putExtra("location", mCurrentLocation);
+        mParentActivity.startActivity(intent);
+
     }
 
     /**
@@ -120,7 +126,7 @@ public class MarkerManager implements GoogleMap.OnMarkerClickListener, GoogleMap
      */
     public void showMarkers() {
         // REST magic
-        Call<List<Location>> allLocations = mRestEndpoint.getLocations();
+        Call<List<Location>> allLocations = mRestEndpoint.getLocations("Dortmund");
         allLocations.enqueue(new Callback<List<Location>>() {
             @Override
             public void onResponse(Call<List<Location>> call, Response<List<Location>> response) {
@@ -142,8 +148,7 @@ public class MarkerManager implements GoogleMap.OnMarkerClickListener, GoogleMap
      */
     private void displayLocationsOnMap(List<Location> locations) {
         for (Location l : locations) {
-            Log.i(LOG_TAG, l.toString());
-            LatLng position = new LatLng(51.486296 + 0.1 * Math.random(), 7.412094 + 0.1 * Math.random());
+            LatLng position = new LatLng(l.getLatitude(), l.getLongitude());
             mMap.addMarker(new MarkerOptions()
                     .icon(getMarkerIcon())
                     .position(position)

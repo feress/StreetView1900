@@ -3,14 +3,12 @@ package de.fh_dortmund.vms.streetview1900.activities;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
-import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdate;
@@ -18,23 +16,10 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptor;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
-
-import java.util.List;
 
 import de.fh_dortmund.vms.streetview1900.R;
-import de.fh_dortmund.vms.streetview1900.api.StreetView1900Endpoint;
-import de.fh_dortmund.vms.streetview1900.api.StreetView1900Service;
-import de.fh_dortmund.vms.streetview1900.api.model.Location;
 import de.fh_dortmund.vms.streetview1900.controls.MarkerManager;
-import de.fh_dortmund.vms.streetview1900.views.MapInfoWindow;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 public class MainActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener {
 
@@ -132,7 +117,4 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     public void onProviderDisabled(String provider) {
     }
 
-    public void onPhotoReplicate(View view) {
-        Log.i(LOG_TAG, "Switch to new activity");
-    }
 }

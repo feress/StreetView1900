@@ -1,9 +1,10 @@
 package de.fh_dortmund.vms.streetview1900.api.model;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Category {
+public class Category implements Serializable {
 
     private int id;
     private String name;

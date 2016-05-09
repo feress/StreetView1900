@@ -1,11 +1,12 @@
 package de.fh_dortmund.vms.streetview1900.api.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Location {
+public class Location implements Serializable {
 
     private int id;
     private double latitude;

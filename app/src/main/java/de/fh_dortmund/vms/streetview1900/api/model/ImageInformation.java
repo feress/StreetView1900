@@ -1,13 +1,14 @@
 package de.fh_dortmund.vms.streetview1900.api.model;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ImageInformation {
+public class ImageInformation implements Serializable {
 
     private int id;
-    private int latitude;
-    private int longitude;
+    private double latitude;
+    private double longitude;
     private String fileName;
     private int size;
     private String date;
@@ -32,28 +33,28 @@ public class ImageInformation {
     /**
      * @return The latitude
      */
-    public int getLatitude() {
+    public double getLatitude() {
         return latitude;
     }
 
     /**
      * @param latitude The latitude
      */
-    public void setLatitude(int latitude) {
+    public void setLatitude(double latitude) {
         this.latitude = latitude;
     }
 
     /**
      * @return The longitude
      */
-    public int getLongitude() {
+    public double getLongitude() {
         return longitude;
     }
 
     /**
      * @param longitude The longitude
      */
-    public void setLongitude(int longitude) {
+    public void setLongitude(double longitude) {
         this.longitude = longitude;
     }
 
