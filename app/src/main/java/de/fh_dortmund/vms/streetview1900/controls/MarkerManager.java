@@ -106,7 +106,7 @@ public class MarkerManager implements GoogleMap.OnMarkerClickListener, GoogleMap
 
             @Override
             public void onFailure(Call<Location> call, Throwable t) {
-                Toast.makeText(mParentActivity, R.string.error_loading_information, Toast.LENGTH_SHORT);
+                Toast.makeText(mParentActivity, R.string.error_loading_information, Toast.LENGTH_SHORT).show();
             }
         });
         return false;
@@ -114,11 +114,14 @@ public class MarkerManager implements GoogleMap.OnMarkerClickListener, GoogleMap
 
     @Override
     public void onInfoWindowClick(Marker marker) {
-        Log.i(LOG_TAG, "Load new activity for " + mCurrentLocation);
-        Intent intent = new Intent(mParentActivity, ReproducePhotoActivity.class);
-        intent.putExtra("location", mCurrentLocation);
-        mParentActivity.startActivity(intent);
-
+        if(mCurrentLocation != null && mCurrentLocation.getImageInformation() != null && mCurrentLocation.getImageInformation().size() > 0) {
+            Log.i(LOG_TAG, "Load new activity for " + mCurrentLocation);
+            Intent intent = new Intent(mParentActivity, ReproducePhotoActivity.class);
+            intent.putExtra("location", mCurrentLocation);
+            mParentActivity.startActivity(intent);
+        } else {
+            Toast.makeText(mParentActivity, R.string.no_image_information_toast, Toast.LENGTH_LONG).show();
+        }
     }
 
     /**

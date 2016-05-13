@@ -66,7 +66,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     requestLocation();
                 } else {
-                    Toast.makeText(this, R.string.error_location_permission_refused, Toast.LENGTH_LONG);
+                    Toast.makeText(this, R.string.error_location_permission_refused, Toast.LENGTH_LONG).show();
                 }
                 return;
             }
