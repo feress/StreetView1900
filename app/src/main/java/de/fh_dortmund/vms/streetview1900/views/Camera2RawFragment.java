@@ -130,7 +130,7 @@ public class Camera2RawFragment extends Fragment
     /**
      * Tag for the {@link Log}.
      */
-    private static final String TAG = "Camera2RawFragment";
+    private static final String TAG = Camera2RawFragment.class.getName();
 
     /**
      * Camera state: Device is closed.
@@ -192,9 +192,9 @@ public class Camera2RawFragment extends Fragment
     };
 
     /**
-     * An {@link AutoFitTextureView} for camera preview.
+     * Preview frame
      */
-    private AutoFitTextureView mTextureView;
+    private TextureView mTextureView;
 
     /**
      * An additional thread for running tasks that shouldn't block the UI.  This is used for all
@@ -474,6 +474,7 @@ public class Camera2RawFragment extends Fragment
                 handleCompletionLocked(requestId, jpegBuilder, mJpegResultQueue);
 
                 if (jpegBuilder != null) {
+                    jpegBuilder.setActivity(getActivity());
                     jpegBuilder.setResult(result);
                     sb.append("Saving JPEG as: ");
                     sb.append(jpegBuilder.getSaveLocation());
@@ -522,8 +523,7 @@ public class Camera2RawFragment extends Fragment
 
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
-        view.findViewById(R.id.picture).setOnClickListener(this);
-        mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
+        mTextureView = (TextureView) view.findViewById(R.id.texture);
 
         // Setup a new OrientationEventListener.  This is used to handle rotation events like a
         // 180 degree rotation that do not normally trigger a call to onCreate to do view re-layout
@@ -929,14 +929,6 @@ public class Camera2RawFragment extends Fragment
                 Size previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
                         rotatedViewWidth, rotatedViewHeight, largestJpeg);
 
-                if (swappedDimensions) {
-                    mTextureView.setAspectRatio(
-                            previewSize.getHeight(), previewSize.getWidth());
-                } else {
-                    mTextureView.setAspectRatio(
-                            previewSize.getWidth(), previewSize.getHeight());
-                }
-
                 // Find rotation of device in degrees (reverse device orientation for front-facing
                 // cameras).
                 int rotation = (mCharacteristics.get(CameraCharacteristics.LENS_FACING) ==
@@ -1162,6 +1154,8 @@ public class Camera2RawFragment extends Fragment
      */
     private static class ImageSaver implements Runnable {
 
+        private final Activity mAcitvity;
+
         /**
          * The image to save.
          */
@@ -1191,21 +1185,25 @@ public class Camera2RawFragment extends Fragment
          */
         private final RefCountedAutoCloseable<ImageReader> mReader;
 
+
         private ImageSaver(Image image, File file, CaptureResult result,
                            CameraCharacteristics characteristics, Context context,
-                           RefCountedAutoCloseable<ImageReader> reader) {
+                           RefCountedAutoCloseable<ImageReader> reader,
+                           Activity acitvity) {
             mImage = image;
             mFile = file;
             mCaptureResult = result;
             mCharacteristics = characteristics;
             mContext = context;
             mReader = reader;
+            mAcitvity = acitvity;
         }
 
         @Override
         public void run() {
             boolean success = false;
             int format = mImage.getFormat();
+            verifyStoragePermissions(mAcitvity);
             switch (format) {
                 case ImageFormat.JPEG: {
                     ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
@@ -1251,6 +1249,34 @@ public class Camera2RawFragment extends Fragment
             }
         }
 
+        // Storage Permissions
+        private static final int REQUEST_EXTERNAL_STORAGE = 1;
+        private static String[] PERMISSIONS_STORAGE = {
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+        };
+
+        /**
+         * Checks if the app has permission to write to device storage
+         *
+         * If the app does not has permission then the user will be prompted to grant permissions
+         *
+         * @param activity
+         */
+        public static void verifyStoragePermissions(Activity activity) {
+            // Check if we have write permission
+            int permission = ActivityCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
+            if (permission != PackageManager.PERMISSION_GRANTED) {
+                // We don't have permission so prompt the user
+                ActivityCompat.requestPermissions(
+                        activity,
+                        PERMISSIONS_STORAGE,
+                        REQUEST_EXTERNAL_STORAGE
+                );
+            }
+        }
+
         /**
          * Builder class for constructing {@link ImageSaver}s.
          * <p/>
@@ -1263,6 +1289,7 @@ public class Camera2RawFragment extends Fragment
             private CameraCharacteristics mCharacteristics;
             private Context mContext;
             private RefCountedAutoCloseable<ImageReader> mReader;
+            private Activity mActivity;
 
             /**
              * Construct a new ImageSaverBuilder using the given {@link Context}.
@@ -1307,12 +1334,19 @@ public class Camera2RawFragment extends Fragment
                 return this;
             }
 
+            public synchronized ImageSaverBuilder setActivity(
+                    final Activity activity) {
+                if (activity == null) throw new NullPointerException();
+                mActivity = activity;
+                return this;
+            }
+
             public synchronized ImageSaver buildIfComplete() {
                 if (!isComplete()) {
                     return null;
                 }
                 return new ImageSaver(mImage, mFile, mCaptureResult, mCharacteristics, mContext,
-                        mReader);
+                        mReader, mActivity);
             }
 
             public synchronized String getSaveLocation() {
