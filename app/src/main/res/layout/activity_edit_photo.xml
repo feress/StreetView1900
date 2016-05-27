@@ -5,8 +5,9 @@
     android:layout_height="match_parent"
     tools:context="de.fh_dortmund.vms.streetview1900.activities.EditPhotoActivity">
 
-    <de.fh_dortmund.vms.streetview1900.views.TouchImageView
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:id="@+id/edit_image_view"/>
+    <ImageView
+        android:id="@+id/edit_image_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop" />
 </RelativeLayout>

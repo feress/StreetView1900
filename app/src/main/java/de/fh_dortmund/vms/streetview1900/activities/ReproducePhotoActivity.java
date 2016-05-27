@@ -1,7 +1,6 @@
 package de.fh_dortmund.vms.streetview1900.activities;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraAccessException;
@@ -46,44 +45,22 @@ import de.fh_dortmund.vms.streetview1900.api.model.Location;
 
 public class ReproducePhotoActivity extends AppCompatActivity {
 
+    private static final String LOG_TAG = ReproducePhotoActivity.class.getName();
+    private static final String CAPTURE_FILENAME_PREFIX = "Photo_";
+    private static final String CAPTURE_FILENAME_FOLDER = "StreetView1900";
+
     private File mFileLastShot;
 
-    private static final String TAG = ReproducePhotoActivity.class.getName();
+    private HandlerThread mBackgroundThread;
+    private Handler mBackgroundHandler;
 
-    private static final String CAPTURE_FILENAME_PREFIX = "StreetView1900";
-    /**
-     * An additional thread for running tasks that shouldn't block the UI.
-     */
-    HandlerThread mBackgroundThread;
-    /**
-     * Handler for running tasks in the background.
-     */
-    Handler mBackgroundHandler;
-    /**
-     * Handler for running tasks on the UI thread.
-     */
-    Handler mForegroundHandler;
-    /**
-     * View for displaying the camera preview.
-     */
-    SurfaceView mSurfaceView;
-    /**
-     * Used to retrieve the captured image when the user takes a snapshot.
-     */
-    ImageReader mCaptureBuffer;
-    /**
-     * Handle to the Android camera services.
-     */
-    CameraManager mCameraManager;
-    /**
-     * The specific camera device that we're using.
-     */
-    CameraDevice mCamera;
+    private Handler mForegroundHandler;
 
-    /**
-     * Our image capture session.
-     */
-    CameraCaptureSession mCaptureSession;
+    private CameraManager mCameraManager;
+    private CameraDevice mCamera;
+    private SurfaceView mSurfaceView;
+    private ImageReader mCaptureBuffer;
+    private CameraCaptureSession mCaptureSession;
 
     /**
      * Given {@code choices} of {@code Size}s supported by a camera, chooses the smallest one whose
@@ -94,7 +71,7 @@ public class ReproducePhotoActivity extends AppCompatActivity {
      * @param height  The minimum desired height
      * @return The optimal {@code Size}, or an arbitrary one if none were big enough
      */
-    static Size chooseBigEnoughSize(Size[] choices, int width, int height) {
+    private static Size chooseBigEnoughSize(Size[] choices, int width, int height) {
         // Collect the supported resolutions that are at least as big as the preview Surface
         List<Size> bigEnough = new ArrayList<Size>();
         for (Size option : choices) {
@@ -106,18 +83,17 @@ public class ReproducePhotoActivity extends AppCompatActivity {
         if (bigEnough.size() > 0) {
             return Collections.min(bigEnough, new CompareSizesByArea());
         } else {
-            Log.e(TAG, "Couldn't find any suitable preview size");
+            Log.e(LOG_TAG, "Couldn't find any suitable preview size");
             return choices[0];
         }
     }
     static class CompareSizesByArea implements Comparator<Size> {
         @Override
         public int compare(Size lhs, Size rhs) {
-            // We cast here to ensure the multiplications won't overflow
+            // Cast here to ensure the multiplications won't overflow
             return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
                     (long) rhs.getWidth() * rhs.getHeight());
         }
-
     }
 
     @Override
@@ -130,6 +106,7 @@ public class ReproducePhotoActivity extends AppCompatActivity {
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
         mForegroundHandler = new Handler(getMainLooper());
         mCameraManager = (CameraManager) getSystemService(CAMERA_SERVICE);
+
         // Inflate the SurfaceView, set it as the main layout, and attach a listener
         View layout = getLayoutInflater().inflate(R.layout.activity_reproduce_photo, null);
         mSurfaceView = (SurfaceView) layout.findViewById(R.id.camera_preview_view);
@@ -137,6 +114,7 @@ public class ReproducePhotoActivity extends AppCompatActivity {
         setContentView(layout);
         // Control flow continues in mSurfaceHolderCallback.surfaceChanged()
 
+        // Add information about selected location and create overlay
         Location location = (Location) getIntent().getSerializableExtra("location");
 
         String locationName = location.getName();
@@ -194,7 +172,7 @@ public class ReproducePhotoActivity extends AppCompatActivity {
         try {
             mBackgroundThread.join();
         } catch (InterruptedException ex) {
-            Log.e(TAG, "Background worker thread was interrupted while joined", ex);
+            Log.e(LOG_TAG, "Background worker thread was interrupted while joined", ex);
         }
         // Close the ImageReader now that the background thread has stopped
         if (mCaptureBuffer != null) mCaptureBuffer.close();
@@ -219,13 +197,13 @@ public class ReproducePhotoActivity extends AppCompatActivity {
                     // This handler can be null because we aren't actually attaching any callback
                     mCaptureSession.capture(requester.build(), /*listener*/null, /*handler*/null);
                 } catch (CameraAccessException ex) {
-                    Log.e(TAG, "Failed to file actual capture request", ex);
+                    Log.e(LOG_TAG, "Failed to file actual capture request", ex);
                 }
             } catch (CameraAccessException ex) {
-                Log.e(TAG, "Failed to build actual capture request", ex);
+                Log.e(LOG_TAG, "Failed to build actual capture request", ex);
             }
         } else {
-            Log.e(TAG, "User attempted to perform a capture outside our session");
+            Log.e(LOG_TAG, "User attempted to perform a capture outside our session");
         }
         // Control flow continues in mImageCaptureListener.onImageAvailable()
     }
@@ -241,14 +219,14 @@ public class ReproducePhotoActivity extends AppCompatActivity {
         @Override
         public void surfaceCreated(SurfaceHolder holder) {
             // This is called every time the surface returns to the foreground
-            Log.i(TAG, "Surface created");
+            Log.i(LOG_TAG, "Surface created");
             mCameraId = null;
             mGotSecondCallback = false;
         }
 
         @Override
         public void surfaceDestroyed(SurfaceHolder holder) {
-            Log.i(TAG, "Surface destroyed");
+            Log.i(LOG_TAG, "Surface destroyed");
             holder.removeCallback(this);
             // We don't stop receiving callbacks forever because onResume() will reattach us
         }
@@ -264,7 +242,7 @@ public class ReproducePhotoActivity extends AppCompatActivity {
                                 mCameraManager.getCameraCharacteristics(cameraId);
                         if (cameraCharacteristics.get(cameraCharacteristics.LENS_FACING) ==
                                 CameraCharacteristics.LENS_FACING_BACK) {
-                            Log.i(TAG, "Found a back-facing camera");
+                            Log.i(LOG_TAG, "Found a back-facing camera");
                             StreamConfigurationMap info = cameraCharacteristics
                                     .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                             // Bigger is better when it comes to saving our image
@@ -272,7 +250,7 @@ public class ReproducePhotoActivity extends AppCompatActivity {
                                     Arrays.asList(info.getOutputSizes(ImageFormat.JPEG)),
                                     new CompareSizesByArea());
                             // Prepare an ImageReader in case the user wants to capture images
-                            Log.i(TAG, "Capture size: " + largestSize);
+                            Log.i(LOG_TAG, "Capture size: " + largestSize);
                             mCaptureBuffer = ImageReader.newInstance(largestSize.getWidth(),
                                     largestSize.getHeight(), ImageFormat.JPEG, /*maxImages*/2);
                             mCaptureBuffer.setOnImageAvailableListener(
@@ -280,12 +258,12 @@ public class ReproducePhotoActivity extends AppCompatActivity {
                             // Danger, W.R.! Attempting to use too large a preview size could
                             // exceed the camera bus' bandwidth limitation, resulting in
                             // gorgeous previews but the storage of garbage capture data.
-                            Log.i(TAG, "SurfaceView size: " +
+                            Log.i(LOG_TAG, "SurfaceView size: " +
                                     mSurfaceView.getWidth() + 'x' + mSurfaceView.getHeight());
                             Size optimalSize = chooseBigEnoughSize(
                                     info.getOutputSizes(SurfaceHolder.class), width, height);
                             // Set the SurfaceHolder to use the camera's largest supported size
-                            Log.i(TAG, "Preview size: " + optimalSize);
+                            Log.i(LOG_TAG, "Preview size: " + optimalSize);
                             SurfaceHolder surfaceHolder = mSurfaceView.getHolder();
                             surfaceHolder.setFixedSize(optimalSize.getWidth(),
                                     optimalSize.getHeight());
@@ -296,13 +274,13 @@ public class ReproducePhotoActivity extends AppCompatActivity {
                         }
                     }
                 } catch (CameraAccessException ex) {
-                    Log.e(TAG, "Unable to list cameras", ex);
+                    Log.e(LOG_TAG, "Unable to list cameras", ex);
                 }
-                Log.e(TAG, "Didn't find any back-facing cameras");
+                Log.e(LOG_TAG, "Didn't find any back-facing cameras");
                 // This is the second time the method is being invoked: our size change is complete
             } else if (!mGotSecondCallback) {
                 if (mCamera != null) {
-                    Log.e(TAG, "Aborting camera open because it hadn't been closed");
+                    Log.e(LOG_TAG, "Aborting camera open because it hadn't been closed");
                     return;
                 }
                 // Open the camera device
@@ -310,7 +288,7 @@ public class ReproducePhotoActivity extends AppCompatActivity {
                     mCameraManager.openCamera(mCameraId, mCameraStateCallback,
                             mBackgroundHandler);
                 } catch (SecurityException | CameraAccessException ex) {
-                    Log.e(TAG, "Failed to configure output surface", ex);
+                    Log.e(LOG_TAG, "Failed to configure output surface", ex);
                 }
                 mGotSecondCallback = true;
                 // Control flow continues in mCameraStateCallback.onOpened()
@@ -325,7 +303,7 @@ public class ReproducePhotoActivity extends AppCompatActivity {
             new CameraDevice.StateCallback() {
                 @Override
                 public void onOpened(CameraDevice camera) {
-                    Log.i(TAG, "Successfully opened camera");
+                    Log.i(LOG_TAG, "Successfully opened camera");
                     mCamera = camera;
                     try {
                         List<Surface> outputs = Arrays.asList(
@@ -333,19 +311,19 @@ public class ReproducePhotoActivity extends AppCompatActivity {
                         camera.createCaptureSession(outputs, mCaptureSessionListener,
                                 mBackgroundHandler);
                     } catch (CameraAccessException ex) {
-                        Log.e(TAG, "Failed to create a capture session", ex);
+                        Log.e(LOG_TAG, "Failed to create a capture session", ex);
                     }
                     // Control flow continues in mCaptureSessionListener.onConfigured()
                 }
 
                 @Override
                 public void onDisconnected(CameraDevice camera) {
-                    Log.e(TAG, "Camera was disconnected");
+                    Log.e(LOG_TAG, "Camera was disconnected");
                 }
 
                 @Override
                 public void onError(CameraDevice camera, int error) {
-                    Log.e(TAG, "State error on device '" + camera.getId() + "': code " + error);
+                    Log.e(LOG_TAG, "State error on device '" + camera.getId() + "': code " + error);
                 }
             };
     /**
@@ -356,7 +334,7 @@ public class ReproducePhotoActivity extends AppCompatActivity {
             new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(CameraCaptureSession session) {
-                    Log.i(TAG, "Finished configuring camera outputs");
+                    Log.i(LOG_TAG, "Finished configuring camera outputs");
                     mCaptureSession = session;
                     SurfaceHolder holder = mSurfaceView.getHolder();
                     if (holder != null) {
@@ -371,13 +349,13 @@ public class ReproducePhotoActivity extends AppCompatActivity {
                                 session.setRepeatingRequest(previewRequest, /*listener*/null,
                                 /*handler*/null);
                             } catch (CameraAccessException ex) {
-                                Log.e(TAG, "Failed to make repeating preview request", ex);
+                                Log.e(LOG_TAG, "Failed to make repeating preview request", ex);
                             }
                         } catch (CameraAccessException ex) {
-                            Log.e(TAG, "Failed to build preview request", ex);
+                            Log.e(LOG_TAG, "Failed to build preview request", ex);
                         }
                     } else {
-                        Log.e(TAG, "Holder didn't exist when trying to formulate preview request");
+                        Log.e(LOG_TAG, "Holder didn't exist when trying to formulate preview request");
                     }
                 }
 
@@ -388,7 +366,7 @@ public class ReproducePhotoActivity extends AppCompatActivity {
 
                 @Override
                 public void onConfigureFailed(CameraCaptureSession session) {
-                    Log.e(TAG, "Configuration error on device '" + mCamera.getId());
+                    Log.e(LOG_TAG, "Configuration error on device '" + mCamera.getId());
                 }
             };
     /**
@@ -446,14 +424,18 @@ public class ReproducePhotoActivity extends AppCompatActivity {
 
             try {
                 // Choose an unused filename under the Pictures/ directory
-                file = File.createTempFile(CAPTURE_FILENAME_PREFIX, ".jpg",
-                        Environment.getExternalStoragePublicDirectory(
-                                Environment.DIRECTORY_PICTURES));
+
+                File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + CAPTURE_FILENAME_FOLDER);
+                if(!directory.exists()) {
+                    directory.mkdirs();
+                }
+
+                file = File.createTempFile(CAPTURE_FILENAME_PREFIX, ".jpg", directory);
                 try (FileOutputStream ostream = new FileOutputStream(file)) {
-                    Log.i(TAG, "Retrieved image is" +
+                    Log.i(LOG_TAG, "Retrieved image is" +
                             (mCapture.getFormat() == ImageFormat.JPEG ? "" : "n't") + " a JPEG");
                     ByteBuffer buffer = mCapture.getPlanes()[0].getBuffer();
-                    Log.i(TAG, "Captured image size: " +
+                    Log.i(LOG_TAG, "Captured image size: " +
                             mCapture.getWidth() + 'x' + mCapture.getHeight());
                     // Write the image out to the chosen file
                     byte[] jpeg = new byte[buffer.remaining()];
@@ -462,12 +444,12 @@ public class ReproducePhotoActivity extends AppCompatActivity {
 
                     saveSuccessful = true;
                 } catch (FileNotFoundException ex) {
-                    Log.e(TAG, "Unable to open output file for writing", ex);
+                    Log.e(LOG_TAG, "Unable to open output file for writing", ex);
                 } catch (IOException ex) {
-                    Log.e(TAG, "Failed to write the image to the output file", ex);
+                    Log.e(LOG_TAG, "Failed to write the image to the output file", ex);
                 }
             } catch (IOException ex) {
-                Log.e(TAG, "Unable to create a new output file", ex);
+                Log.e(LOG_TAG, "Unable to create a new output file", ex);
             } finally {
                 mCapture.close();
             }
