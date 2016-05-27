@@ -27,11 +27,26 @@
             android:layout_height="match_parent">
 
             <FrameLayout
-                android:id="@+id/camera_preview_holder"
+                android:id="@+id/camera_preview_frame"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
-                <!-- Camera Preview goes here -->
+
+                <SurfaceView
+                    android:id="@+id/camera_preview_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:onClick="onClickOnSurfaceView"/>
             </FrameLayout>
+
+            <ImageView
+                android:id="@+id/new_image_preview"
+                android:layout_width="@dimen/new_image_preview_width"
+                android:layout_height="@dimen/new_image_preview_height"
+                android:layout_gravity="bottom|right"
+                android:background="@color/colorPrimary"
+                android:padding="1dp"
+                android:visibility="invisible"
+                android:onClick="onClickOnNewPreviewImage"/>
 
             <ImageView
                 android:id="@+id/historic_image"

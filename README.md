@@ -16,3 +16,8 @@ GOOGLE_MAPS_API_KEY=your_fancy_maps_key
 REST_SERVICE_URL=http://some.url/api/
 ```
 
+## Included libraries
+* [google-gson](https://github.com/google/gson): Apache License 2.0
+* [Retrofit](http://square.github.io/retrofit/): Apache License 2.0
+* [Picasso](http://square.github.io/picasso/): Apache License 2.0
+* [TouchImageView](https://github.com/MikeOrtiz/TouchImageView): Copyright (c) 2012 Michael Ortiz

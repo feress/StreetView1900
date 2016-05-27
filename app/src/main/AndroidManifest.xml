@@ -27,8 +27,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".activities.ReproducePhotoActivity"
-            android:parentActivityName=".activities.MainActivity"></activity>
+        <activity
+            android:name=".activities.ReproducePhotoActivity"
+            android:parentActivityName=".activities.MainActivity" />
+        <activity
+            android:name=".activities.EditPhotoActivity"
+            android:parentActivityName=".activities.ReproducePhotoActivity" />
     </application>
 
 </manifest>
