@@ -1,8 +1,12 @@
 package de.fh_dortmund.vms.streetview1900.activities;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
+import android.graphics.RectF;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -16,15 +20,18 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.util.Size;
+import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.SeekBar;
+import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
 
@@ -46,10 +53,11 @@ import de.fh_dortmund.vms.streetview1900.api.model.Location;
 public class ReproducePhotoActivity extends AppCompatActivity {
 
     private static final String LOG_TAG = ReproducePhotoActivity.class.getName();
-    private static final String CAPTURE_FILENAME_PREFIX = "Photo_";
-    private static final String CAPTURE_FILENAME_FOLDER = "StreetView1900";
+    private static final String CAPTURE_FILENAME_PREFIX = "StreetView1900";
+    private static final int STREET_VIEW_1900_PERMISSION_CAPTURE_IMAGE = 2;
 
     private File mFileLastShot;
+    private Activity activity = this;
 
     private HandlerThread mBackgroundThread;
     private Handler mBackgroundHandler;
@@ -61,6 +69,16 @@ public class ReproducePhotoActivity extends AppCompatActivity {
     private SurfaceView mSurfaceView;
     private ImageReader mCaptureBuffer;
     private CameraCaptureSession mCaptureSession;
+    private String mCameraId;
+
+    // for later use...
+    private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
+    static {
+        ORIENTATIONS.append(Surface.ROTATION_0, 0);
+        ORIENTATIONS.append(Surface.ROTATION_90, 90);
+        ORIENTATIONS.append(Surface.ROTATION_180, 180);
+        ORIENTATIONS.append(Surface.ROTATION_270, 270);
+    }
 
     /**
      * Given {@code choices} of {@code Size}s supported by a camera, chooses the smallest one whose
@@ -87,6 +105,7 @@ public class ReproducePhotoActivity extends AppCompatActivity {
             return choices[0];
         }
     }
+
     static class CompareSizesByArea implements Comparator<Size> {
         @Override
         public int compare(Size lhs, Size rhs) {
@@ -116,6 +135,11 @@ public class ReproducePhotoActivity extends AppCompatActivity {
 
         // Add information about selected location and create overlay
         Location location = (Location) getIntent().getSerializableExtra("location");
+
+        if(location == null) {
+            finish();
+            return;
+        }
 
         String locationName = location.getName();
         if (location != null && locationName.trim().length() > 0) {
@@ -184,14 +208,13 @@ public class ReproducePhotoActivity extends AppCompatActivity {
      * and saves it to permanent storage.</p>
      */
     public void onClickOnSurfaceView(View v) {
-        if(v.getId() == R.id.new_image_preview) {
+        if (v.getId() == R.id.new_image_preview) {
             return;
         }
 
         if (mCaptureSession != null) {
             try {
-                CaptureRequest.Builder requester =
-                        mCamera.createCaptureRequest(mCamera.TEMPLATE_STILL_CAPTURE);
+                CaptureRequest.Builder requester = mCamera.createCaptureRequest(mCamera.TEMPLATE_STILL_CAPTURE);
                 requester.addTarget(mCaptureBuffer.getSurface());
                 try {
                     // This handler can be null because we aren't actually attaching any callback
@@ -207,12 +230,11 @@ public class ReproducePhotoActivity extends AppCompatActivity {
         }
         // Control flow continues in mImageCaptureListener.onImageAvailable()
     }
+
     /**
      * Callbacks invoked upon state changes in our {@code SurfaceView}.
      */
     final SurfaceHolder.Callback mSurfaceHolderCallback = new SurfaceHolder.Callback() {
-        /** The camera device to use, or null if we haven't yet set a fixed surface size. */
-        private String mCameraId;
         /** Whether we received a change callback after setting our fixed surface size. */
         private boolean mGotSecondCallback;
 
@@ -238,35 +260,25 @@ public class ReproducePhotoActivity extends AppCompatActivity {
                 // Find the device's back-facing camera and set the destination buffer sizes
                 try {
                     for (String cameraId : mCameraManager.getCameraIdList()) {
-                        CameraCharacteristics cameraCharacteristics =
-                                mCameraManager.getCameraCharacteristics(cameraId);
-                        if (cameraCharacteristics.get(cameraCharacteristics.LENS_FACING) ==
-                                CameraCharacteristics.LENS_FACING_BACK) {
+                        CameraCharacteristics cameraCharacteristics = mCameraManager.getCameraCharacteristics(cameraId);
+                        if (cameraCharacteristics.get(cameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK) {
                             Log.i(LOG_TAG, "Found a back-facing camera");
-                            StreamConfigurationMap info = cameraCharacteristics
-                                    .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                            StreamConfigurationMap info = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                             // Bigger is better when it comes to saving our image
-                            Size largestSize = Collections.max(
-                                    Arrays.asList(info.getOutputSizes(ImageFormat.JPEG)),
-                                    new CompareSizesByArea());
+                            Size largestSize = Collections.max(Arrays.asList(info.getOutputSizes(ImageFormat.JPEG)), new CompareSizesByArea());
                             // Prepare an ImageReader in case the user wants to capture images
                             Log.i(LOG_TAG, "Capture size: " + largestSize);
-                            mCaptureBuffer = ImageReader.newInstance(largestSize.getWidth(),
-                                    largestSize.getHeight(), ImageFormat.JPEG, /*maxImages*/2);
-                            mCaptureBuffer.setOnImageAvailableListener(
-                                    mImageCaptureListener, mBackgroundHandler);
+                            mCaptureBuffer = ImageReader.newInstance(largestSize.getWidth(), largestSize.getHeight(), ImageFormat.JPEG, /*maxImages*/2);
+                            mCaptureBuffer.setOnImageAvailableListener(mImageCaptureListener, mBackgroundHandler);
                             // Danger, W.R.! Attempting to use too large a preview size could
                             // exceed the camera bus' bandwidth limitation, resulting in
                             // gorgeous previews but the storage of garbage capture data.
-                            Log.i(LOG_TAG, "SurfaceView size: " +
-                                    mSurfaceView.getWidth() + 'x' + mSurfaceView.getHeight());
-                            Size optimalSize = chooseBigEnoughSize(
-                                    info.getOutputSizes(SurfaceHolder.class), width, height);
+                            Log.i(LOG_TAG, "SurfaceView size: " +  mSurfaceView.getWidth() + 'x' + mSurfaceView.getHeight());
+                            Size optimalSize = chooseBigEnoughSize(info.getOutputSizes(SurfaceHolder.class), width, height);
                             // Set the SurfaceHolder to use the camera's largest supported size
                             Log.i(LOG_TAG, "Preview size: " + optimalSize);
                             SurfaceHolder surfaceHolder = mSurfaceView.getHolder();
-                            surfaceHolder.setFixedSize(optimalSize.getWidth(),
-                                    optimalSize.getHeight());
+                            surfaceHolder.setFixedSize(optimalSize.getWidth(), optimalSize.getHeight());
                             mCameraId = cameraId;
                             return;
                             // Control flow continues with this method one more time
@@ -285,9 +297,17 @@ public class ReproducePhotoActivity extends AppCompatActivity {
                 }
                 // Open the camera device
                 try {
-                    mCameraManager.openCamera(mCameraId, mCameraStateCallback,
-                            mBackgroundHandler);
-                } catch (SecurityException | CameraAccessException ex) {
+                    if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
+                            ActivityCompat.checkSelfPermission(activity, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
+                            ActivityCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(activity,
+                                new String[] {Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                                STREET_VIEW_1900_PERMISSION_CAPTURE_IMAGE);
+
+                        return;
+                    }
+                    mCameraManager.openCamera(mCameraId, mCameraStateCallback, mBackgroundHandler);
+                } catch (CameraAccessException ex) {
                     Log.e(LOG_TAG, "Failed to configure output surface", ex);
                 }
                 mGotSecondCallback = true;
@@ -295,43 +315,62 @@ public class ReproducePhotoActivity extends AppCompatActivity {
             }
         }
     };
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case STREET_VIEW_1900_PERMISSION_CAPTURE_IMAGE: {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    try {
+                        if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                            ActivityCompat.requestPermissions(activity, new String[] {Manifest.permission.CAMERA}, STREET_VIEW_1900_PERMISSION_CAPTURE_IMAGE);
+                            return;
+                        }
+                        mCameraManager.openCamera(mCameraId, mCameraStateCallback, mBackgroundHandler);
+                    } catch (CameraAccessException ex) {
+                        Log.e(LOG_TAG, "Failed to configure output surface", ex);
+                    } // TODO: Make Toast if permissions denied
+                }
+                return;
+            }
+        }
+    }
+
     /**
      * Calledbacks invoked upon state changes in our {@code CameraDevice}. <p>These are run on
      * {@code mBackgroundThread}.</p>
      */
-    final CameraDevice.StateCallback mCameraStateCallback =
-            new CameraDevice.StateCallback() {
-                @Override
-                public void onOpened(CameraDevice camera) {
-                    Log.i(LOG_TAG, "Successfully opened camera");
-                    mCamera = camera;
-                    try {
-                        List<Surface> outputs = Arrays.asList(
-                                mSurfaceView.getHolder().getSurface(), mCaptureBuffer.getSurface());
-                        camera.createCaptureSession(outputs, mCaptureSessionListener,
-                                mBackgroundHandler);
-                    } catch (CameraAccessException ex) {
-                        Log.e(LOG_TAG, "Failed to create a capture session", ex);
-                    }
-                    // Control flow continues in mCaptureSessionListener.onConfigured()
-                }
+    final CameraDevice.StateCallback mCameraStateCallback = new CameraDevice.StateCallback() {
+        @Override
+        public void onOpened(CameraDevice camera) {
+            Log.i(LOG_TAG, "Successfully opened camera");
+            mCamera = camera;
+            try {
+                List<Surface> outputs = Arrays.asList(
+                        mSurfaceView.getHolder().getSurface(), mCaptureBuffer.getSurface());
+                camera.createCaptureSession(outputs, mCaptureSessionListener,
+                        mBackgroundHandler);
+            } catch (CameraAccessException ex) {
+                Log.e(LOG_TAG, "Failed to create a capture session", ex);
+            }
+            // Control flow continues in mCaptureSessionListener.onConfigured()
+        }
 
-                @Override
-                public void onDisconnected(CameraDevice camera) {
-                    Log.e(LOG_TAG, "Camera was disconnected");
-                }
+        @Override
+        public void onDisconnected(CameraDevice camera) {
+            Log.e(LOG_TAG, "Camera was disconnected");
+        }
 
-                @Override
-                public void onError(CameraDevice camera, int error) {
-                    Log.e(LOG_TAG, "State error on device '" + camera.getId() + "': code " + error);
-                }
-            };
+        @Override
+        public void onError(CameraDevice camera, int error) {
+            Log.e(LOG_TAG, "State error on device '" + camera.getId() + "': code " + error);
+        }
+    };
     /**
      * Callbacks invoked upon state changes in our {@code CameraCaptureSession}. <p>These are run on
      * {@code mBackgroundThread}.</p>
      */
-    final CameraCaptureSession.StateCallback mCaptureSessionListener =
-            new CameraCaptureSession.StateCallback() {
+    final CameraCaptureSession.StateCallback mCaptureSessionListener = new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(CameraCaptureSession session) {
                     Log.i(LOG_TAG, "Finished configuring camera outputs");
@@ -372,7 +411,6 @@ public class ReproducePhotoActivity extends AppCompatActivity {
     /**
      * Callback invoked when we've received a JPEG image from the camera.
      */
-    Activity activity = this;
     final ImageReader.OnImageAvailableListener mImageCaptureListener =
             new ImageReader.OnImageAvailableListener() {
                 @Override
@@ -425,12 +463,7 @@ public class ReproducePhotoActivity extends AppCompatActivity {
             try {
                 // Choose an unused filename under the Pictures/ directory
 
-                File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + File.separator + CAPTURE_FILENAME_FOLDER);
-                if(!directory.exists()) {
-                    directory.mkdirs();
-                }
-
-                file = File.createTempFile(CAPTURE_FILENAME_PREFIX, ".jpg", directory);
+                file = File.createTempFile(CAPTURE_FILENAME_PREFIX, ".jpg", Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES));
                 try (FileOutputStream ostream = new FileOutputStream(file)) {
                     Log.i(LOG_TAG, "Retrieved image is" +
                             (mCapture.getFormat() == ImageFormat.JPEG ? "" : "n't") + " a JPEG");
@@ -468,6 +501,7 @@ public class ReproducePhotoActivity extends AppCompatActivity {
         if(mFileLastShot != null) {
             Intent intent = new Intent(this, EditPhotoActivity.class);
             intent.putExtra("image", mFileLastShot);
+            intent.putExtra("location", getIntent().getSerializableExtra("location"));
             startActivity(intent);
         } else {
             // TODO: Make Toast

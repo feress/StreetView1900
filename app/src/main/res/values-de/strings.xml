@@ -7,4 +7,5 @@
     <string name="error_loading_information">Informationen zu diesem Punkt können nicht abgerufen werden.</string>
     <string name="no_image_information_toast">Keine ImageInformation</string>
     <string name="request_permission">Ohne Deine Erlaubnis können wir die Kamera leider nicht benutzen.</string>
+    <string name="error_camera_permission_refused">Kamera kann nicht geöffnet werden - keine Berechtigung.</string>
 </resources>

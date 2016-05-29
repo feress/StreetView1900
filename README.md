@@ -21,3 +21,5 @@ REST_SERVICE_URL=http://some.url/api/
 * [Retrofit](http://square.github.io/retrofit/): Apache License 2.0
 * [Picasso](http://square.github.io/picasso/): Apache License 2.0
 * [PhotoView](https://github.com/chrisbanes/PhotoView): Apache License 2.0
+
+**Icons** by [Icons8](https://icons8.com/)

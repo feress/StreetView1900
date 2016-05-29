@@ -6,7 +6,5 @@
     <string name="error_loading_information">Can\'t load information for this marker.</string>
     <string name="request_permission">Please grant permissions to use the camera</string>
     <string name="no_image_information_toast">No ImageInformation given!</string>
-
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="error_camera_permission_refused">Permission denied</string>
 </resources>

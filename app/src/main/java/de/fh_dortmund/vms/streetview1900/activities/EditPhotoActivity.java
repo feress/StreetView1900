@@ -13,7 +13,9 @@ import com.squareup.picasso.Target;
 
 import java.io.File;
 
+import de.fh_dortmund.vms.streetview1900.BuildConfig;
 import de.fh_dortmund.vms.streetview1900.R;
+import de.fh_dortmund.vms.streetview1900.api.model.Location;
 import uk.co.senab.photoview.PhotoViewAttacher;
 
 public class EditPhotoActivity extends AppCompatActivity {
@@ -44,5 +46,17 @@ public class EditPhotoActivity extends AppCompatActivity {
                 Log.e(LOG_TAG, "Cannot load image.");
             }
         });
+
+        Location location = (Location) getIntent().getSerializableExtra("location");
+
+        String locationName = location.getName();
+        if (location != null && locationName.trim().length() > 0) {
+            setTitle(locationName);
+        }
+
+        final ImageView historicImage = (ImageView) findViewById(R.id.edit_image_view_overlay);
+        Picasso.with(this)
+                .load(BuildConfig.REST_SERVICE_URL + "images/" + location.getImageInformation().get(0).getId())
+                .into(historicImage);
     }
 }
